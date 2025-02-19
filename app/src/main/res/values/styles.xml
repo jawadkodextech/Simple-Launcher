@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="AppTheme" parent="AppTheme.Base" />
 
@@ -9,12 +9,24 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
 
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
-        <item name="android:enforceStatusBarContrast">false</item>
-        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
+    <style name="TextDefault" parent="@android:style/TextAppearance.Large">
+        <item name="android:textColor">@drawable/text_colors_default</item>
+        <item name="android:textColorHint">?attr/primaryColorTrans80</item>
+        <item name="android:shadowColor">?attr/primaryTextShadowColor</item>
+        <item name="android:shadowDx">0</item>
+        <item name="android:shadowDy">2</item>
+        <item name="android:shadowRadius">4</item>
+    </style>
+
+    <style name="TextMedium" parent="TextDefault">
+        <item name="android:textSize">20sp</item>
+    </style>
 </resources>

@@ -19,6 +19,7 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -28,15 +29,16 @@ import android.view.*
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
 import android.widget.PopupMenu
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.graphics.drawable.toBitmap
-import androidx.core.graphics.drawable.toDrawable
-import androidx.core.view.GestureDetectorCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.core.view.iterator
 import androidx.viewbinding.ViewBinding
 import com.simplemobiletools.commons.extensions.*
-import com.simplemobiletools.commons.helpers.*
+import com.simplemobiletools.commons.helpers.DARK_GREY
+import com.simplemobiletools.commons.helpers.ensureBackgroundThread
+import com.simplemobiletools.commons.helpers.isPiePlus
 import com.simplemobiletools.launcher.BuildConfig
 import com.simplemobiletools.launcher.R
 import com.simplemobiletools.launcher.databinding.ActivityMainBinding
@@ -73,9 +75,21 @@ class MainActivity : SimpleActivity(), FlingListener {
     private var mActionOnWidgetConfiguredWidget: ((granted: Boolean) -> Unit)? = null
     private var mActionOnAddShortcut: ((shortcutId: String, label: String, icon: Drawable) -> Unit)? = null
     private var wasJustPaused: Boolean = false
-
-    private lateinit var mDetector: GestureDetectorCompat
+    private val resultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                resetLauncherViaFakeActivity()
+            }
+        }
+    private lateinit var mDetector: GestureDetector//Compat
     private val binding by viewBinding(ActivityMainBinding::inflate)
+    private fun showSertDefaultlauncher() {
+        if (isDefaultLauncher() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            resetLauncherViaFakeActivity()
+        } else {
+            showLauncherSelector(resultLauncher)
+        }
+    }
 
     companion object {
         private var mLastUpEvent = 0L
@@ -90,7 +104,8 @@ class MainActivity : SimpleActivity(), FlingListener {
         setContentView(binding.root)
         appLaunched(BuildConfig.APPLICATION_ID)
 
-        mDetector = GestureDetectorCompat(this, MyGestureListener(this))
+//        mDetector = GestureDetectorCompat(this, MyGestureListener(this))
+        mDetector = GestureDetector(this, MyGestureListener(this))
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -139,6 +154,7 @@ class MainActivity : SimpleActivity(), FlingListener {
     override fun onStart() {
         super.onStart()
         binding.homeScreenGrid.root.appWidgetHost.startListening()
+        showSertDefaultlauncher()
     }
 
     override fun onResume() {
@@ -179,7 +195,7 @@ class MainActivity : SimpleActivity(), FlingListener {
         }
 
         // avoid showing fully colored navigation bars
-        if (window.navigationBarColor != resources.getColor(R.color.semitransparent_navigation)) {
+        if (window.navigationBarColor != resources.getColor(R.color.semitransparent_navigation, null)) {
             window.navigationBarColor = Color.TRANSPARENT
         }
 
@@ -202,6 +218,7 @@ class MainActivity : SimpleActivity(), FlingListener {
         wasJustPaused = true
     }
 
+    @Deprecated("Deprecated in Java")
     @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         if (isAllAppsFragmentExpanded()) {
@@ -320,7 +337,8 @@ class MainActivity : SimpleActivity(), FlingListener {
             }
 
             MotionEvent.ACTION_CANCEL,
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_UP,
+                -> {
                 mTouchDownX = -1
                 mTouchDownY = -1
                 mIgnoreMoveEvents = false
@@ -476,6 +494,7 @@ class MainActivity : SimpleActivity(), FlingListener {
         mIgnoreUpEvent = false
     }
 
+    @SuppressLint("AccessibilityFocus")
     private fun showFragment(fragment: ViewBinding) {
         ObjectAnimator.ofFloat(fragment.root, "y", 0f).apply {
             duration = ANIMATION_DURATION
@@ -483,7 +502,7 @@ class MainActivity : SimpleActivity(), FlingListener {
             start()
         }
 
-        window.navigationBarColor = resources.getColor(R.color.semitransparent_navigation)
+        window.navigationBarColor = resources.getColor(R.color.semitransparent_navigation, null)
         binding.homeScreenGrid.root.fragmentExpanded()
         binding.homeScreenGrid.root.hideResizeLines()
         fragment.root.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
@@ -850,13 +869,16 @@ class MainActivity : SimpleActivity(), FlingListener {
             val label = info.loadLabel(packageManager).toString()
             val drawable = info.loadIcon(packageManager) ?: getDrawableForPackageName(packageName) ?: continue
             val placeholderColor = calculateAverageColor(drawable.toBitmap())
-            allApps.add(AppLauncher(null, label, packageName, activityName, 0, placeholderColor, drawable.toBitmap().toDrawable(resources)))
+//            val placeholderColor = Color.TRANSPARENT
+            allApps.add(AppLauncher(null, label, packageName, activityName, 0, placeholderColor, drawable))//.toBitmap().toDrawable(resources)
         }
 
         // add Simple Launchers settings as an app
         val drawable = getDrawableForPackageName(packageName)
+        //Color.TRANSPARENT//
         val placeholderColor = calculateAverageColor(drawable!!.toBitmap())
-        val launcherSettings = AppLauncher(null, getString(R.string.launcher_settings), packageName, "", 0, placeholderColor, drawable.toBitmap().toDrawable(resources))
+        val launcherSettings =
+            AppLauncher(null, getString(R.string.launcher_settings), packageName, "", 0, placeholderColor, drawable)//.toBitmap().toDrawable(resources)
         allApps.add(launcherSettings)
         launchersDB.insertAll(allApps)
         return allApps
@@ -1012,7 +1034,7 @@ class MainActivity : SimpleActivity(), FlingListener {
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int,
         appWidgetInfo: AppWidgetProviderInfo,
-        callback: (canBind: Boolean) -> Unit
+        callback: (canBind: Boolean) -> Unit,
     ) {
         mActionOnCanBindWidget = null
         val canCreateWidget = appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, appWidgetInfo.provider)

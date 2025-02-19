@@ -16,8 +16,6 @@ import android.view.Gravity
 import android.view.Menu
 import android.view.View
 import android.widget.PopupMenu
-import androidx.core.graphics.drawable.toBitmap
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.MenuCompat
 import androidx.core.view.forEach
 import com.google.android.material.color.MaterialColors
@@ -124,13 +122,12 @@ fun Activity.handleGridItemPopupMenu(anchorView: View, gridItem: HomeScreenGridI
         MenuCompat.setGroupDividerEnabled(menu, hasShortcuts)
         menu.setGroupVisible(R.id.group_shortcuts, hasShortcuts)
         if (hasShortcuts) {
-            val iconSize = resources.getDimensionPixelSize(R.dimen.menu_icon_size)
+//            val iconSize = resources.getDimensionPixelSize(R.dimen.menu_icon_size)
             shortcuts?.forEach {
                 menu.add(R.id.group_shortcuts, Menu.NONE, Menu.NONE, it.getLabel())
                     .setIcon(
-                        launcherApps.getShortcutIconDrawable(it, resources.displayMetrics.densityDpi).toBitmap(width = iconSize, height = iconSize)
-                            .toDrawable(resources)
-                    )
+                        launcherApps.getShortcutIconDrawable(it, resources.displayMetrics.densityDpi)
+                    )//.toBitmap(width = iconSize, height = iconSize).toDrawable(resources)
                     .setOnMenuItemClickListener { _ ->
                         listener.onAnyClick()
                         val id = it.id

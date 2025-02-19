@@ -1,16 +1,18 @@
 package com.simplemobiletools.launcher.views
 
+import android.annotation.SuppressLint
 import android.appwidget.AppWidgetHostView
 import android.content.Context
 import android.graphics.PointF
 import android.os.Handler
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import com.simplemobiletools.launcher.R
 import kotlin.math.abs
 
 class MyAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
-    private var longPressHandler = Handler()
+    private var longPressHandler = Handler(Looper.getMainLooper())
     private var actionDownCoords = PointF()
     private var currentCoords = PointF()
     private var actionDownMS = 0L
@@ -20,6 +22,7 @@ class MyAppWidgetHostView(context: Context) : AppWidgetHostView(context) {
     var longPressListener: ((x: Float, y: Float) -> Unit)? = null
     var onIgnoreInterceptedListener: (() -> Unit)? = null       // let the home grid react on swallowed clicks, for example by hiding the widget resize frame
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         return if (ignoreTouches) {
             onIgnoreInterceptedListener?.invoke()

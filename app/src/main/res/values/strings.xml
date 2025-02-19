@@ -15,6 +15,9 @@
     <string name="close_app_drawer_on_app_open">Close app drawer on opening an app</string>
     <string name="home_screen_settings">Home screen</string>
     <string name="widget_too_big">Widget is too big for current home screen size</string>
+    <string name="unable_to_open_app" translatable="false">Unable to open app info</string>
+    <string name="are_you_using_your_phone_or_is_your_phone_using_you" translatable="false">Are you using your phone, or is your phone using you?</string>
+    <string name="set_as_default_launcher_u" translatable="false"><u>Set as default launcher</u></string>
     <!--
         Haven't found some strings? There's more at
         https://github.com/SimpleMobileTools/Simple-Commons/tree/master/commons/src/main/res

@@ -1,5 +1,6 @@
 package com.simplemobiletools.launcher.views
 
+
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -25,7 +26,6 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.RelativeLayout
-import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toRect
 import androidx.core.graphics.withScale
@@ -35,7 +35,10 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.customview.widget.ExploreByTouchHelper
 import com.google.android.material.math.MathUtils
 import com.simplemobiletools.commons.extensions.*
-import com.simplemobiletools.commons.helpers.*
+import com.simplemobiletools.commons.helpers.HIGHER_ALPHA
+import com.simplemobiletools.commons.helpers.MEDIUM_ALPHA
+import com.simplemobiletools.commons.helpers.ensureBackgroundThread
+import com.simplemobiletools.commons.helpers.isSPlus
 import com.simplemobiletools.launcher.R
 import com.simplemobiletools.launcher.activities.MainActivity
 import com.simplemobiletools.launcher.databinding.HomeScreenGridBinding
@@ -46,6 +49,7 @@ import com.simplemobiletools.launcher.helpers.*
 import com.simplemobiletools.launcher.models.HomeScreenGridItem
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.*
+
 
 class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : RelativeLayout(context, attrs, defStyle) {
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
@@ -133,8 +137,8 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
             textSize = context.resources.getDimension(com.simplemobiletools.commons.R.dimen.medium_text_size)
         }
 
-        dragShadowCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = context.resources.getColor(com.simplemobiletools.commons.R.color.hint_white)
+        dragShadowCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {//
+            color = context.resources.getColor(com.simplemobiletools.commons.R.color.hint_white, null)
             strokeWidth = context.resources.getDimension(com.simplemobiletools.commons.R.dimen.small_margin)
             style = Paint.Style.STROKE
         }
@@ -143,7 +147,7 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
             strokeWidth = context.resources.getDimension(R.dimen.page_indicator_stroke_width)
         }
         currentPageIndicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = context.resources.getColor(android.R.color.white)
+            color = context.resources.getColor(android.R.color.white, null)
             style = Paint.Style.FILL
         }
 
@@ -179,6 +183,40 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
         binding = HomeScreenGridBinding.bind(this)
     }
 
+    private fun checkBitmapAndReturn(originalBitmap: Bitmap?): Bitmap? {
+        val scaleFactor = 0.25f  // Example scaling factor (50% of the original size)
+
+// Calculate the new dimensions
+        val newWidth = ((originalBitmap?.width ?: 0) * scaleFactor).toInt()
+        val newHeight = ((originalBitmap?.height ?: 0) * scaleFactor).toInt()
+
+// Create the scaled bitmap
+        val scaledBitmap = originalBitmap?.let { Bitmap.createScaledBitmap(it, newWidth, newHeight, true) }
+        return scaledBitmap
+    }
+
+    fun calculateInSampleSize(
+        options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int,
+    ): Int {
+        // Raw height and width of image
+        val height = options.outHeight
+        val width = options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight = height / 2
+            val halfWidth = width / 2
+
+            // Calculate the largest inSampleSize value that is a power of 2
+            // and keeps both height and width larger than the requested height and width.
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+
+        return inSampleSize
+    }
+
     fun fetchGridItems() {
         ensureBackgroundThread {
             val providers = appWidgetManager.installedProviders
@@ -187,10 +225,11 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
                 if (item.type == ITEM_TYPE_ICON) {
                     item.drawable = context.getDrawableForPackageName(item.packageName)
                 } else if (item.type == ITEM_TYPE_FOLDER) {
-                    item.drawable = item.toFolder().generateDrawable()
+//                    item.drawable = item.toFolder().generateDrawable()
+                    item.drawable = context.getDrawableForPackageName(item.packageName)
                 } else if (item.type == ITEM_TYPE_SHORTCUT) {
                     if (item.icon != null) {
-                        item.drawable = BitmapDrawable(item.icon)
+//                        item.drawable = BitmapDrawable(context.resources, checkBitmapAndReturn(item.icon))
                     } else {
                         ensureBackgroundThread {
                             context.homeScreenGridItemsDB.deleteById(item.id!!)
@@ -289,7 +328,8 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
 
         if (draggedItem!!.drawable == null) {
             if (draggedItem?.type == ITEM_TYPE_FOLDER) {
-                draggedItem!!.drawable = draggedGridItem.toFolder().generateDrawable()
+//                draggedItem!!.drawable = draggedGridItem.toFolder().generateDrawable()
+                draggedItem!!.drawable = context.getDrawableForPackageName(draggedGridItem.packageName)
             } else {
                 draggedItem!!.drawable = context.getDrawableForPackageName(draggedGridItem.packageName)
             }
@@ -530,11 +570,11 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
     }
 
     private fun addAppIconOrShortcut() {
-        var isDroppingPositionValid: Boolean = false
+        var isDroppingPositionValid = false
         var potentialParent: HomeScreenGridItem? = null
         var xIndex: Int? = null
         var yIndex: Int? = null
-        var redrawIcons = false
+        var redrawIcons: Boolean
 
         val folder = currentlyOpenFolder
         if (folder != null && folder.getItemsDrawingRect().contains(
@@ -552,7 +592,7 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
             redrawIcons = true
         } else {
             val center = gridCenters.minBy {
-                Math.abs(it.x - draggedItemCurrentCoords.first + sideMargins.left) + Math.abs(it.y - draggedItemCurrentCoords.second + sideMargins.top)
+                abs(it.x - draggedItemCurrentCoords.first + sideMargins.left) + Math.abs(it.y - draggedItemCurrentCoords.second + sideMargins.top)
             }
 
             val gridCells = getClosestGridCells(center)
@@ -640,7 +680,7 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
         xIndex: Int,
         yIndex: Int,
         newParentId: Long? = null,
-        toFolderEnd: Boolean = true
+        toFolderEnd: Boolean = true,
     ) {
         if (newParentId != null && newParentId != draggedHomeGridItem?.parentId) {
             gridItems.firstOrNull { it.id == newParentId }?.also {
@@ -733,17 +773,17 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
                 "",
                 -1,
                 "",
-                draggedItem!!.icon,
+                null,
                 yIndex == rowCount - 1,
                 newParentId,
                 draggedItem!!.drawable,
                 draggedItem!!.providerInfo,
                 draggedItem!!.activityInfo
-            )
+            )//draggedItem!!.icon
 
             fun finalizeFolderOrder(newItem: HomeScreenGridItem) {
                 if (newParentId != null && gridItems.any { it.parentId == newParentId && it.left == newItem.left }) {
-                    gridItems.filter { it.parentId == newParentId && it.left >= newItem.left && it.id != newItem.id}.forEach {
+                    gridItems.filter { it.parentId == newParentId && it.left >= newItem.left && it.id != newItem.id }.forEach {
                         it.left += 1
                     }
 
@@ -761,7 +801,7 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
                     ensureBackgroundThread {
                         newHomeScreenGridItem.shortcutId = shortcutId
                         newHomeScreenGridItem.title = label
-                        newHomeScreenGridItem.icon = icon.toBitmap()
+//                        newHomeScreenGridItem.icon = icon.toBitmap()
                         newHomeScreenGridItem.drawable = icon
                         storeAndShowGridItem(newHomeScreenGridItem)
                         finalizeFolderOrder(newHomeScreenGridItem)
@@ -1373,9 +1413,10 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
         }
 
         override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>?) {
-            val sorted = gridItems.filter { it.visibleOnCurrentPage() || (currentlyOpenFolder != null && it.parentId == currentlyOpenFolder?.item?.id) }.sortedBy {
-                (if (it.parentId == null) it.getDockAdjustedTop(rowCount) else 1) * 100 + it.left
-            }
+            val sorted =
+                gridItems.filter { it.visibleOnCurrentPage() || (currentlyOpenFolder != null && it.parentId == currentlyOpenFolder?.item?.id) }.sortedBy {
+                    (if (it.parentId == null) it.getDockAdjustedTop(rowCount) else 1) * 100 + it.left
+                }
             sorted.forEachIndexed { index, homeScreenGridItem ->
                 virtualViewIds?.add(index, homeScreenGridItem.id?.toInt() ?: index)
             }
@@ -1582,7 +1623,7 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
 
     private inner class HomeScreenFolder(
         val item: HomeScreenGridItem,
-        animateOpening: Boolean
+        animateOpening: Boolean,
     ) {
         var scale: Float = 1f
         private var closing = false
@@ -1619,7 +1660,7 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
             if (iconSize == 0) {
                 return null
             }
-
+//            return context.getDrawable(R.drawable.placeholder_drawable)
             val items = getItems()
             val itemsCount = getItems().count()
 
@@ -1627,17 +1668,32 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
                 return null
             }
 
-            val bitmap = Bitmap.createBitmap(iconSize, iconSize, Bitmap.Config.ARGB_8888)
+
+            // Limit the iconSize to avoid creating a bitmap that is too large
+            val maxIconSize = 512  // Define a max size (you can adjust this)
+            val actualIconSize = min(iconSize, maxIconSize)  // Use the minimum between actual size and max limit
+
+// Create the bitmap with the reduced size
+            val bitmap = checkBitmapAndReturn(Bitmap.createBitmap(actualIconSize, actualIconSize, Bitmap.Config.RGB_565))!!
             val canvas = Canvas(bitmap)
-            val circlePath = Path().apply { addCircle((iconSize / 2).toFloat(), (iconSize / 2).toFloat(), (iconSize / 2).toFloat(), Path.Direction.CCW) }
+
+// Create a circular path for clipping
+            val circlePath = Path().apply {
+                addCircle((actualIconSize / 2).toFloat(), (actualIconSize / 2).toFloat(), (actualIconSize / 2).toFloat(), Path.Direction.CCW)
+            }
+
             canvas.clipPath(circlePath)
             canvas.drawPaint(folderIconBackgroundPaint)
+
+// Calculate the folder grid layout
             val folderColumnCount = ceil(sqrt(itemsCount.toDouble())).roundToInt()
             val folderRowCount = ceil(itemsCount.toFloat() / folderColumnCount).roundToInt()
-            val scaledCellSize = (iconSize.toFloat() / folderColumnCount)
+            val scaledCellSize = (actualIconSize.toFloat() / folderColumnCount)
             val scaledGap = scaledCellSize / 5f
-            val scaledIconSize = (iconSize - (folderColumnCount + 1) * scaledGap) / folderColumnCount
+            val scaledIconSize = (actualIconSize - (folderColumnCount + 1) * scaledGap) / folderColumnCount
             val extraYMargin = if (folderRowCount < folderColumnCount) (scaledIconSize + scaledGap) / 2 else 0f
+
+// Draw each item
             items.forEach {
                 val (row, column) = getItemPosition(it)
                 val drawableX = (scaledGap + column * scaledIconSize + column * scaledGap).toInt()
@@ -1646,8 +1702,34 @@ class HomeScreenGrid(context: Context, attrs: AttributeSet, defStyle: Int) : Rel
                 newDrawable?.setBounds(drawableX, drawableY, drawableX + scaledIconSize.toInt(), drawableY + scaledIconSize.toInt())
                 newDrawable?.draw(canvas)
             }
+
+// Draw the circular border around the folder
             canvas.drawPath(circlePath, folderIconBorderPaint)
+
             return BitmapDrawable(resources, bitmap)
+
+
+//            val bitmap = checkBitmapAndReturn(Bitmap.createBitmap(iconSize, iconSize, Bitmap.Config.ARGB_8888))!!
+//            val canvas = Canvas(bitmap)
+//            val circlePath = Path().apply { addCircle((iconSize / 2).toFloat(), (iconSize / 2).toFloat(), (iconSize / 2).toFloat(), Path.Direction.CCW) }
+//            canvas.clipPath(circlePath)
+//            canvas.drawPaint(folderIconBackgroundPaint)
+//            val folderColumnCount = ceil(sqrt(itemsCount.toDouble())).roundToInt()
+//            val folderRowCount = ceil(itemsCount.toFloat() / folderColumnCount).roundToInt()
+//            val scaledCellSize = (iconSize.toFloat() / folderColumnCount)
+//            val scaledGap = scaledCellSize / 5f
+//            val scaledIconSize = (iconSize - (folderColumnCount + 1) * scaledGap) / folderColumnCount
+//            val extraYMargin = if (folderRowCount < folderColumnCount) (scaledIconSize + scaledGap) / 2 else 0f
+//            items.forEach {
+//                val (row, column) = getItemPosition(it)
+//                val drawableX = (scaledGap + column * scaledIconSize + column * scaledGap).toInt()
+//                val drawableY = (extraYMargin + scaledGap + row * scaledIconSize + row * scaledGap).toInt()
+//                val newDrawable = it.drawable?.constantState?.newDrawable()?.mutate()
+//                newDrawable?.setBounds(drawableX, drawableY, drawableX + scaledIconSize.toInt(), drawableY + scaledIconSize.toInt())
+//                newDrawable?.draw(canvas)
+//            }
+//            canvas.drawPath(circlePath, folderIconBorderPaint)
+//            return BitmapDrawable(resources, bitmap)
         }
 
         fun getDrawingRect(): RectF {
@@ -1798,7 +1880,7 @@ private class AnimatedGridPager(
     private val getHandler: () -> Handler,
     private val getNextPageBound: () -> Int,
     private val getPrevPageBound: () -> Int,
-    private val pageChangeStarted: () -> Unit
+    private val pageChangeStarted: () -> Unit,
 ) {
 
     companion object {

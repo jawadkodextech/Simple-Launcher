@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
 
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
     <uses-permission
         android:name="android.permission.USE_FINGERPRINT"
         tools:node="remove" />
@@ -21,12 +23,18 @@
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
-
+    <uses-permission
+        android:name="com.samsung.android.providers.context.permission.WRITE_USE_APP_FEATURE_SURVEY"
+        tools:node="remove" />
     <application
         android:allowBackup="true"
         android:appCategory="productivity"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_launcher_name"
+        android:largeHeap="true"
+        android:hardwareAccelerated="false"
+
+
         android:localeConfig="@xml/locale_config"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
@@ -430,5 +438,21 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
+
+        <activity
+            android:name=".extensions.FakeHomeActivity"
+            android:enabled="false"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="stateHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
     </application>
 </manifest>

@@ -131,7 +131,7 @@ class WidgetsAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         fun bindView(widgetListItem: WidgetsListItem, callback: (itemView: View, adapterPosition: Int) -> Unit) {
             itemView.apply {
-                callback(this, adapterPosition)
+                callback(this, bindingAdapterPosition)
             }
         }
     }

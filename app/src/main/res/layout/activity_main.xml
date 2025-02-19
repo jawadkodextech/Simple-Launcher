@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main_holder"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -23,5 +24,23 @@
         android:layout_width="1dp"
         android:layout_height="1dp"
         android:visibility="gone" />
+    <!--style="@style/TextMedium"-->
+<!--    <TextView-->
+<!--        android:id="@+id/setDefaultLauncher"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_alignParentBottom="true"-->
+<!--        android:layout_centerHorizontal="true"-->
+<!--        android:layout_gravity="bottom|center_horizontal"-->
+<!--        android:layout_marginHorizontal="20dp"-->
+<!--        android:layout_marginBottom="56dp"-->
+<!--        android:ellipsize="end"-->
+<!--        android:maxLines="1"-->
+<!--        android:text="@string/set_as_default_launcher_u"-->
+<!--        tools:visibility="visible" />-->
+    <!--    if (isDefaultLauncher() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)-->
+    <!--    resetLauncherViaFakeActivity()-->
+    <!--    else-->
+    <!--    showLauncherSelector(resultLauncher)-->
 
 </RelativeLayout>
